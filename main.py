@@ -91,7 +91,7 @@ class ItemEnterEventListener(EventListener):
     def on_event(self, event: ItemEnterEvent, extension: VsFolderExtension):
         arg = event.get_data()
         if isinstance(arg, OpenFolder):
-            subprocess.run(['code', f'{arg.folder}{os.sep}'])
+            subprocess.run(['code', f'{arg.folder}{os.sep}']) # -------------------------------------------------------------------Aqui
             return HideWindowAction()
         return RenderResultListAction(
             build_list_of_folders(
@@ -153,14 +153,14 @@ def build_list_of_folders(
 
     items = [
         ExtensionResultItem(
-            icon='images/open-folder.png',
+            icon='images/open-folder.svg',
             name='Open current folder',
             description=f'Vs folder: {folder}',
             on_enter=ExtensionCustomAction(
                 OpenFolder(folder), keep_app_open=False),
         ),
         ExtensionResultItem(
-            icon='images/inner-folder.png',
+            icon='images/inner-folder.svg',
             name='Go to parent',
             description=f'Vs folder: {folder.parent}',
             on_enter=ActionList([
@@ -179,7 +179,7 @@ def build_list_of_folders(
 
         items.append(
             ExtensionResultItem(
-                icon='images/inner-folder.png',
+                icon='images/inner-folder.svg',
                 name=try_relative_folder,
                 description=f'Vs folder: {folder}',
                 on_enter=ActionList([

@@ -56,40 +56,33 @@ class OnLoad(EventListener):
             'true', 't', 'y', 'yes', '1'
         )
 
-class OpenWithApp():
-    def __init__(self, folder: PosixPath, app: str):
-        self.folder = folder
-        self.app = app
-
 
 class KeywordQueryEventListener(EventListener):
+
     def on_event(self, event: KeywordQueryEvent, extension: VsFolderExtension):
-        arg = event.get_argument() or ''
-        args = arg.strip().split(maxsplit=1)
+        arg = event.get_argument()
 
-        if not args:
-            return RenderResultListAction([])
+        if arg is None:
+            arg = ''
 
-        app = args[0]
-        path_arg = args[1] if len(args) > 1 else ''
-
-        # Descobrir pasta inicial
-        if path_arg.startswith(os.sep) and path_arg.rfind(os.sep) == 0:
+        # absolute path
+        if arg.startswith(os.sep) and arg.rfind(os.sep) == 0:
             folder = Path('/')
-            path_arg = path_arg[1:]
-        elif path_arg.startswith(os.sep):
-            parts = path_arg.rsplit(os.sep, 1)
+            arg = arg[1:]
+        elif arg.startswith(os.sep):
+            parts = arg.rsplit(os.sep, 1)
             folder = Path(parts[0])
-            path_arg = parts[-1]
-        elif '~/' in path_arg:
+            arg = parts[-1]
+        elif '~/' in arg:
             folder = Path.home()
-            path_arg = path_arg[path_arg.index('~/')+2:]
+            arg = arg[arg.index('~/')+2:]
         else:
             folder = extension.home
 
-        # Salva o app dentro de um objeto customizado (junto com o caminho)
         return RenderResultListAction(
-            build_list_of_folders(extension, folder, path_arg, LIMIT_FOLDERS_TO_SHOW, app)
+            build_list_of_folders(
+                extension, folder, arg, LIMIT_FOLDERS_TO_SHOW
+            )
         )
 
 
@@ -98,7 +91,7 @@ class ItemEnterEventListener(EventListener):
     def on_event(self, event: ItemEnterEvent, extension: VsFolderExtension):
         arg = event.get_data()
         if isinstance(arg, OpenFolder):
-            subprocess.run([arg.app, str(arg.folder)])
+            subprocess.run(['code', f'{arg.folder}{os.sep}']) # -------------------------------------------------------------------Aqui
             return HideWindowAction()
         return RenderResultListAction(
             build_list_of_folders(
@@ -127,8 +120,7 @@ class PreferencesUpdateEventListener(EventListener):
 def build_list_of_folders(
     extension: VsFolderExtension,
     folder: PosixPath, arg: str,
-    limit_folders_to_show: int = 5,
-    app: str = 'code'
+    limit_folders_to_show: int = 5
 ) -> List[ExtensionResultItem]:
     # access subfolders in case of complete string
     if os.sep in arg:
@@ -164,8 +156,8 @@ def build_list_of_folders(
             icon='images/open-folder.svg',
             name='Open current folder',
             description=f'Vs folder: {folder}',
-            on_enter=ExtensionCustomAction(OpenWithApp(folder, app), keep_app_open=False)
-
+            on_enter=ExtensionCustomAction(
+                OpenFolder(folder), keep_app_open=False),
         ),
         ExtensionResultItem(
             icon='images/inner-folder.svg',

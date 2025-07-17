@@ -1,9 +1,9 @@
 {
   "required_api_version": "^2.0.0",
-  "name": "Vs Folder",
-  "description": "Allow you to open vscode folders",
+  "name": "Folder",
+  "description": "Allow you to open folders",
   "developer_name": "Fernando Pérez",
-  "icon": "images/icon.png",
+  "icon": "images/icon.svg",
   "options": {
     "query_debounce": 0.05
   },
@@ -13,12 +13,12 @@
       "type": "keyword",
       "name": "Open with Vscode in folder",
       "description": "Search folder to open vscode",
-      "default_value": "vs"
+      "default_value": "folder"
     },
     {
       "id": "home_input",
       "type": "input",
-      "name": "Vscode folder home",
+      "name": "Folder home",
       "description": "Where the navigation starts (empty is the user directory)",
       "default_value": ""
     },

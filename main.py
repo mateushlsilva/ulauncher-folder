@@ -34,6 +34,7 @@ class VsFolderExtension(Extension):
     def __init__(self):
         super().__init__()
         self.home: Optional[PosixPath] = Path.home()
+        self.app = 'code'
         self.show_hidden: bool = False
         self.subscribe(PreferencesEvent, OnLoad())
         self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
@@ -62,9 +63,23 @@ class KeywordQueryEventListener(EventListener):
     def on_event(self, event: KeywordQueryEvent, extension: VsFolderExtension):
         arg = event.get_argument()
 
-        if arg is None:
-            arg = ''
+        if not arg:
+            return RenderResultListAction([
+                ExtensionResultItem(
+                    icon='images/visual-studio-code.svg',
+                    name='Abrir com Code',
+                    description='Abrir pastas usando o Visual Studio Code',
+                    on_enter=SetUserQueryAction(f'{extension.preferences.get("vs_kw")} code ')
+                ),
+                ExtensionResultItem(
+                    icon='images/file-manager.svg',
+                    name='Abrir com Nautilus',
+                    description='Abrir pastas usando o Nautilus',
+                    on_enter=SetUserQueryAction(f'{extension.preferences.get("vs_kw")} nautilus ')
+                )
+            ])
 
+        extension.app = arg.split(' ')[0]
         # absolute path
         if arg.startswith(os.sep) and arg.rfind(os.sep) == 0:
             folder = Path('/')
@@ -91,7 +106,7 @@ class ItemEnterEventListener(EventListener):
     def on_event(self, event: ItemEnterEvent, extension: VsFolderExtension):
         arg = event.get_data()
         if isinstance(arg, OpenFolder):
-            subprocess.run(['code', f'{arg.folder}{os.sep}']) # -------------------------------------------------------------------Aqui
+            subprocess.run([f'{extension.app}', f'{arg.folder}{os.sep}']) # -------------------------------------------------------------------Aqui
             return HideWindowAction()
         return RenderResultListAction(
             build_list_of_folders(
@@ -123,15 +138,21 @@ def build_list_of_folders(
     limit_folders_to_show: int = 5
 ) -> List[ExtensionResultItem]:
     # access subfolders in case of complete string
-    if os.sep in arg:
-        extra_path = arg.split(os.sep)
+    parts = arg.strip().split(maxsplit=1)
+    app = parts[0] if len(parts) > 0 else ''
+    path_part = parts[1] if len(parts) > 1 else ''
+
+    # Acessa subpastas se contiver barras
+    if os.sep in path_part:
+        extra_path = path_part.split(os.sep)
         initial_part = extra_path[:-1]
         logger.info(f'List of folders: {folder}')
         folder = folder.joinpath(*initial_part)
-        arg = extra_path[-1]
+        path_part = extra_path[-1]
 
+    lower_arg = path_part.lower()
     logger.debug(f'')
-    lower_arg = arg.lower()
+    #lower_arg = arg.lower()
     folders = []
     if folder.exists():
         folders = sorted(
@@ -145,7 +166,7 @@ def build_list_of_folders(
             key=lambda folder: - folder.stat().st_mtime
         )
 
-    vs_keyword = extension.preferences.get('vs_kw')
+    keyword = extension.preferences.get('vs_kw')
     home = str(extension.home) + os.sep
     try_relative_folder = str(folder)
     if try_relative_folder.startswith(home):
@@ -165,9 +186,9 @@ def build_list_of_folders(
             description=f'Vs folder: {folder.parent}',
             on_enter=ActionList([
                 SetUserQueryAction(
-                    f'{vs_keyword} {try_relative_folder}{os.sep}..{os.sep}'
+                    f'{keyword} {app} {try_relative_folder}{os.sep}..{os.sep}'
                 ),
-                ExtensionCustomAction(folder, keep_app_open=True)
+                ExtensionCustomAction(folder.parent, keep_app_open=True)
             ]),
         )
     ]
@@ -184,7 +205,7 @@ def build_list_of_folders(
                 description=f'Vs folder: {folder}',
                 on_enter=ActionList([
                     SetUserQueryAction(
-                        f'{vs_keyword} {try_relative_folder}{os.sep}'
+                        f'{keyword} {app} {try_relative_folder}{os.sep}'
                     ),
                     ExtensionCustomAction(folder, keep_app_open=True)
                 ]),
